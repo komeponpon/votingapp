@@ -1,16 +1,26 @@
-import { SetStateAction, useState } from "react";
+import { SetStateAction, useState, useEffect } from "react";
+import io from 'socket.io-client';
+
+const socket = io();
 
 const VotingApp = () => {
   const [mode, setMode] = useState('normal');
-  const [voteCount, setVoteCount] = useState({yes: 0, no:0 });
+  const [voteCount, setVoteCount] = useState({ yes: 0, no: 0 });
   const [showResults, setShowResults] = useState(false);
   const [stalinsChoice, setStalinsChoice] = useState(null);
 
-  const castVote = (choice:any) => {
+  useEffect(() => {
+    socket.on('voteUpdate', (data) => {
+      setVoteCount(data.voteCount);
+      setStalinsChoice(data.stalinsChoice);
+    });
+  }, []);
+
+  const castVote = (choice: any) => {
     if (mode === 'stalin') {
       setStalinsChoice(choice);
       setShowResults(true);
-    } else if (mode === 'nash'){
+    } else if (mode === 'nash') {
       const majority = getMajority();
       setVoteCount((prevCount) => ({
         yes: majority === 'はい' ? prevCount.yes + 1 : prevCount.yes,
@@ -24,11 +34,17 @@ const VotingApp = () => {
       }));
       setShowResults(true);
     }
+
+    socket.emit('vote', {
+      mode,
+      voteCount,
+      stalinsChoice,
+    });
   };
 
   const reset = () => {
     setStalinsChoice(null);
-    setVoteCount({yes: 0, no: 0});
+    setVoteCount({ yes: 0, no: 0 });
     setShowResults(false);
   };
 
